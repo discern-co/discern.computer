@@ -1,10 +1,44 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import LocomotiveScroll from 'locomotive-scroll'
 import 'locomotive-scroll/dist/locomotive-scroll.css'
+import Globe from './Globe'
 import './App.css'
 
-// ─── Change this one string to update the manifesto ───────────────────────────
-const MANIFESTO = "Us. The problems worth solving aren't the ones worth funding. Or pursuing at all. We solve them anyway — not for the money, but for the people who need it."
+// ─── Manifesto copy — split around the cycling word ───────────────────────────
+const MANIFESTO_BEFORE = 'We see it. We solve the problems "not worth" solving. Not worth funding. Not worth pursuing. We build anyway — not for the money, but for the '
+const MANIFESTO_AFTER  = ' who need it.'
+
+const CYCLING_WORDS = ['teachers', 'students', 'veterans', 'scholars', 'rescuers', 'workers', 'parents', 'people']
+
+function CyclingWord({ index }: { index: number }) {
+  const prevIndex = useRef(index)
+  const [slots, setSlots] = useState<{ current: number; prev: number | null }>({
+    current: index,
+    prev: null,
+  })
+
+  useEffect(() => {
+    if (index !== prevIndex.current) {
+      setSlots({ current: index, prev: prevIndex.current })
+      prevIndex.current = index
+      const id = setTimeout(() => setSlots(s => ({ ...s, prev: null })), 450)
+      return () => clearTimeout(id)
+    }
+  }, [index])
+
+  return (
+    <span className="cycling-word">
+      {slots.prev !== null && (
+        <span key={`o${slots.prev}`} className="cycling-word__text cycling-word__text--out">
+          {CYCLING_WORDS[slots.prev % CYCLING_WORDS.length]}
+        </span>
+      )}
+      <span key={`i${slots.current}`} className="cycling-word__text cycling-word__text--in">
+        {CYCLING_WORDS[slots.current % CYCLING_WORDS.length]}
+      </span>
+    </span>
+  )
+}
 
 interface Project {
   name: string
@@ -27,6 +61,14 @@ function App() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const manifestoWrapperRef = useRef<HTMLDivElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
+  const [wordIndex, setWordIndex] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setWordIndex(i => i + 1)
+    }, 2200)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current
@@ -124,15 +166,18 @@ function App() {
             The software industry is very good at solving problems for people who can pay.
           </p>
           <p className="problem__body">
-            Nonprofits. PTOs. Community theaters. The people doing the most essential work have remained an afterthought since the beginning. Not because it's hard. But because building for them doesn't scale, make money, or seem "novel" — and the solution never gets built.
+            Engineers, nonprofits, teachers, volunteers — the people doing the most essential work tend to inherit the worst tools. Not because they're hard to make "right," but because their problems are invisible and unglamorous. So the solution never gets built.
           </p>
         </div>
       </section>
 
       <div className="problem-closing">
+        <div className="globe-clip" aria-hidden="true">
+          <Globe />
+        </div>
         <div className="container">
-          <p className="problem-closing__line">If nobody does —</p>
-          <p className="problem-closing__line"><strong>who does?</strong></p>
+          <p className="problem-closing__line">It starts with</p>
+          <p className="problem-closing__line"><strong>seeing it.</strong></p>
         </div>
       </div>
 
@@ -140,8 +185,12 @@ function App() {
         <section className="mission">
           <div className="container">
             <div className="manifesto-wrapper" ref={manifestoWrapperRef}>
-              <p className="manifesto manifesto--dim">{MANIFESTO}</p>
-              <p className="manifesto manifesto--lit" aria-hidden="true">{MANIFESTO}</p>
+              <p className="manifesto manifesto--dim">
+                {MANIFESTO_BEFORE}<CyclingWord index={wordIndex} />{MANIFESTO_AFTER}
+              </p>
+              <p className="manifesto manifesto--lit" aria-hidden="true">
+                {MANIFESTO_BEFORE}<CyclingWord index={wordIndex} />{MANIFESTO_AFTER}
+              </p>
             </div>
           </div>
           <div className="mission-progress" ref={progressBarRef} />
@@ -169,7 +218,7 @@ function App() {
       <section className="contribute" aria-label="Contribute">
         <div className="container contribute__inner">
           <h2 className="contribute__heading">Want to Contribute?</h2>
-          <p className="contribute__sub">Everything we build is open. If you share the mission, we'd love your help — code, design, feedback, or just a star.</p>
+          <p className="contribute__sub">We build in the open where we can. If you share the belief that the right tool should exist, we'd love your help.</p>
           <a
             className="contribute__cta"
             href="https://github.com/discern-co"

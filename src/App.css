@@ -128,6 +128,71 @@
   }
 }
 
+/* Cycling word */
+
+.cycling-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  position: relative;
+  line-height: inherit;
+  text-align: center;
+}
+
+.cycling-word::before {
+  content: 'students';
+  display: inline-block;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@keyframes word-slide-in {
+  from {
+    transform: translate3d(0, 80%, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes word-slide-out {
+  from {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(0, -80%, 0);
+    opacity: 0;
+  }
+}
+
+.cycling-word__text--in,
+.cycling-word__text--out {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.cycling-word__text--in {
+  animation: word-slide-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cycling-word__text--out {
+  animation: word-slide-out 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cycling-word__text--in,
+  .cycling-word__text--out {
+    animation: none;
+  }
+}
+
 /* Problem */
 
 .problem {
@@ -168,6 +233,39 @@
   flex-direction: column;
   justify-content: center;
   gap: 0;
+  position: relative;
+}
+
+/*
+  .globe-clip — spans from section left to the container's right outer edge.
+  overflow:hidden here is what slices the globe in half at the content boundary,
+  leaving viewport margin to the right of the visible half.
+*/
+.globe-clip {
+  position: absolute;
+  inset: 0;
+  right: max(0px, calc((100% - var(--max-w)) / 2));
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 22%);
+  mask-image: linear-gradient(to right, transparent 0%, black 22%);
+}
+
+.globe-canvas {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(50%);
+  width: min(74vh, 70vw);
+  height: min(74vh, 70vw);
+  max-width: 860px;
+  max-height: 860px;
+}
+
+.problem-closing .container {
+  position: relative;
+  z-index: 1;
 }
 
 .problem-closing__line {
@@ -460,6 +558,10 @@ html {
 }
 
 @media (max-width: 600px) {
+  .globe-clip {
+    display: none;
+  }
+
   .hero {
     padding-bottom: 4vh;
   }
