@@ -4,7 +4,7 @@ the website for discern co. — *see further.*
 
 ## what's here
 
-a single-page site built with react + vite, deployed to cloudflare pages. it's mostly a manifesto and a list of what we're building.
+a single-page site built with react + vite and deployed to cloudflare workers with wrangler. it's mostly a manifesto and a list of what we're building.
 
 ## dev
 
@@ -19,7 +19,7 @@ bun dev
 bun run deploy
 ```
 
-deploys to cloudflare workers via wrangler. you'll need to be authenticated.
+builds the app with vite and deploys it to cloudflare workers via wrangler. you'll need to be authenticated.
 
 ## projects
 
