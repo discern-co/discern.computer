@@ -70,6 +70,7 @@ function App() {
     return () => clearInterval(id)
   }, [])
 
+
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current
     const manifestoWrapper = manifestoWrapperRef.current

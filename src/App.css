@@ -131,17 +131,15 @@
 /* Cycling word */
 
 .cycling-word {
-  display: inline-block;
+  display: inline-grid;
   overflow: hidden;
   vertical-align: bottom;
-  position: relative;
   line-height: inherit;
-  text-align: center;
 }
 
 .cycling-word::before {
   content: 'students';
-  display: inline-block;
+  grid-area: 1 / 1;
   visibility: hidden;
   pointer-events: none;
   white-space: nowrap;
@@ -171,8 +169,7 @@
 
 .cycling-word__text--in,
 .cycling-word__text--out {
-  position: absolute;
-  inset: 0;
+  grid-area: 1 / 1;
   text-align: center;
   white-space: nowrap;
   will-change: transform, opacity;
@@ -351,6 +348,7 @@
   clip-path: polygon(0% 0%, 0% 0%, 0% 0%); /* starts fully hidden */
 }
 
+
 @media (prefers-reduced-motion: reduce) {
   .manifesto--lit {
     color: var(--fg);
@@ -358,6 +356,8 @@
     -webkit-background-clip: unset;
     background-clip: unset;
   }
+
+
 }
 
 /* Work */
