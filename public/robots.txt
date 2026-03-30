@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://discern.computer/sitemap.xml
