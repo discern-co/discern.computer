@@ -249,8 +249,6 @@
   mask-image: linear-gradient(to right, transparent 0%, black 22%);
 }
 
-.globe-mount,
-.globe-placeholder,
 .globe-canvas {
   position: absolute;
   right: 0;
@@ -260,14 +258,6 @@
   height: min(74vh, 70vw);
   max-width: 860px;
   max-height: 860px;
-}
-
-.globe-placeholder {
-  background:
-    radial-gradient(circle at 30% 30%, rgba(240, 236, 228, 0.12), transparent 42%),
-    radial-gradient(circle at 55% 55%, rgba(240, 236, 228, 0.07), transparent 58%);
-  border-radius: 50%;
-  opacity: 0.55;
 }
 
 .problem-closing .container {

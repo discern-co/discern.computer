@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
+import Globe from './Globe'
 import './App.css'
 
 // ─── Manifesto copy — split around the cycling word ───────────────────────────
@@ -9,7 +10,6 @@ const MANIFESTO_AFTER  = ' who need it.'
 
 const CYCLING_WORDS = ['teachers', 'students', 'veterans', 'scholars', 'rescuers', 'workers', 'parents', 'people']
 const INITIAL_CLIP_PATH = 'polygon(0% 0%, 0% 0%, 0% 0%)'
-const LazyGlobe = lazy(() => import('./Globe'))
 
 function CyclingWord({ index }: { index: number }) {
   const prevIndex = useRef(index)
@@ -57,41 +57,6 @@ const projects: Project[] = [
     displayUrl: 'openboxoffice.org',
   },
 ]
-
-function DeferredGlobe() {
-  const hostRef = useRef<HTMLDivElement>(null)
-  const [shouldRender, setShouldRender] = useState(false)
-
-  useEffect(() => {
-    const host = hostRef.current
-    if (!host || shouldRender) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return
-        setShouldRender(true)
-        observer.disconnect()
-      },
-      { rootMargin: '30% 0px' },
-    )
-
-    observer.observe(host)
-
-    return () => observer.disconnect()
-  }, [shouldRender])
-
-  return (
-    <div ref={hostRef} className="globe-mount" aria-hidden="true">
-      {shouldRender ? (
-        <Suspense fallback={<div className="globe-placeholder" />}>
-          <LazyGlobe />
-        </Suspense>
-      ) : (
-        <div className="globe-placeholder" />
-      )}
-    </div>
-  )
-}
 
 function App() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -250,7 +215,7 @@ function App() {
 
       <div className="problem-closing">
         <div className="globe-clip" aria-hidden="true">
-          <DeferredGlobe />
+          <Globe />
         </div>
         <div className="container">
           <p className="problem-closing__line">It starts with</p>
