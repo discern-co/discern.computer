@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import LocomotiveScroll from 'locomotive-scroll'
-import 'locomotive-scroll/dist/locomotive-scroll.css'
-import Globe from './Globe'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
 import './App.css'
 
 // ─── Manifesto copy — split around the cycling word ───────────────────────────
@@ -9,6 +8,8 @@ const MANIFESTO_BEFORE = 'We see it. We solve the problems "not worth" solving. 
 const MANIFESTO_AFTER  = ' who need it.'
 
 const CYCLING_WORDS = ['teachers', 'students', 'veterans', 'scholars', 'rescuers', 'workers', 'parents', 'people']
+const INITIAL_CLIP_PATH = 'polygon(0% 0%, 0% 0%, 0% 0%)'
+const LazyGlobe = lazy(() => import('./Globe'))
 
 function CyclingWord({ index }: { index: number }) {
   const prevIndex = useRef(index)
@@ -57,10 +58,47 @@ const projects: Project[] = [
   },
 ]
 
+function DeferredGlobe() {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [shouldRender, setShouldRender] = useState(false)
+
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host || shouldRender) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return
+        setShouldRender(true)
+        observer.disconnect()
+      },
+      { rootMargin: '30% 0px' },
+    )
+
+    observer.observe(host)
+
+    return () => observer.disconnect()
+  }, [shouldRender])
+
+  return (
+    <div ref={hostRef} className="globe-mount" aria-hidden="true">
+      {shouldRender ? (
+        <Suspense fallback={<div className="globe-placeholder" />}>
+          <LazyGlobe />
+        </Suspense>
+      ) : (
+        <div className="globe-placeholder" />
+      )}
+    </div>
+  )
+}
+
 function App() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const manifestoWrapperRef = useRef<HTMLDivElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const missionMetricsRef = useRef({ start: 0, end: 1, nLines: 0 })
   const [wordIndex, setWordIndex] = useState(0)
 
   useEffect(() => {
@@ -70,6 +108,17 @@ function App() {
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    const lenis = new Lenis({
+      autoRaf: true,
+      anchors: true,
+      lerp: 0.1,
+      wheelMultiplier: 0.95,
+      touchMultiplier: 1,
+    })
+
+    return () => lenis.destroy()
+  }, [])
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current
@@ -80,65 +129,92 @@ function App() {
     const lit = manifestoWrapper.querySelector<HTMLElement>('.manifesto--lit')
     if (!lit) return
 
-    let nLines = 0
+    const setRevealProgress = (progress: number) => {
+      const { nLines } = missionMetricsRef.current
+      if (nLines === 0) return
+
+      progressBar?.style.setProperty('transform', `scaleX(${progress})`)
+      progressBar?.style.setProperty('opacity', progress >= 1 ? '0' : '1')
+
+      if (progress <= 0) {
+        lit.style.clipPath = INITIAL_CLIP_PATH
+        lit.style.animationPlayState = 'paused'
+        return
+      }
+
+      if (progress >= 1) {
+        lit.style.clipPath = 'none'
+        lit.style.animationPlayState = 'running'
+        return
+      }
+
+      lit.style.animationPlayState = 'running'
+
+      const lineProgress = progress * nLines
+      const lineIndex = Math.min(Math.floor(lineProgress), nLines - 1)
+      const partialX = (lineProgress - lineIndex) * 100
+
+      if (lineIndex === 0) {
+        const bottomPct = (1 / nLines) * 100
+        lit.style.clipPath =
+          `polygon(0% 0%, ${partialX}% 0%, ${partialX}% ${bottomPct}%, 0% ${bottomPct}%)`
+        return
+      }
+
+      const topPct = (lineIndex / nLines) * 100
+      const bottomPct = ((lineIndex + 1) / nLines) * 100
+      lit.style.clipPath =
+        `polygon(0% 0%, 100% 0%, 100% ${topPct}%, ${partialX}% ${topPct}%, ${partialX}% ${bottomPct}%, 0% ${bottomPct}%)`
+    }
+
+    const updateReveal = () => {
+      animationFrameRef.current = null
+
+      const { start, end } = missionMetricsRef.current
+      const progress = Math.max(0, Math.min(1, (window.scrollY - start) / (end - start)))
+      setRevealProgress(progress)
+    }
+
     const measureLines = () => {
       const lineH = parseFloat(window.getComputedStyle(lit).lineHeight)
-      nLines = Math.round(manifestoWrapper.getBoundingClientRect().height / lineH)
-      // Keep per-line scroll budget constant regardless of screen size / line count
+      const nLines = Math.max(
+        1,
+        Math.round(manifestoWrapper.getBoundingClientRect().height / lineH),
+      )
+
+      missionMetricsRef.current.nLines = nLines
       scrollContainer.style.height = `${Math.max(350, nLines * 55)}svh`
+
+      const start = scrollContainer.offsetTop
+      const end = start + scrollContainer.offsetHeight - window.innerHeight
+
+      missionMetricsRef.current.start = start
+      missionMetricsRef.current.end = Math.max(start + 1, end)
+      updateReveal()
     }
+
+    const scheduleUpdate = () => {
+      if (animationFrameRef.current !== null) return
+      animationFrameRef.current = window.requestAnimationFrame(updateReveal)
+    }
+
+    lit.style.clipPath = INITIAL_CLIP_PATH
     measureLines()
 
     const ro = new ResizeObserver(measureLines)
     ro.observe(manifestoWrapper)
-
-    const scroll = new LocomotiveScroll({
-      scrollCallback: () => {
-        if (nLines === 0) return
-
-        const rect = scrollContainer.getBoundingClientRect()
-        const scrollableH = scrollContainer.offsetHeight - window.innerHeight
-        const progress = Math.max(0, Math.min(1, -rect.top / scrollableH))
-
-        // Progress bar: grow while active, fade out when complete
-        if (progressBar) {
-          progressBar.style.width = `${progress * 100}%`
-          progressBar.style.opacity = progress >= 1 ? '0' : '1'
-        }
-
-        if (progress >= 1) {
-          lit.style.clipPath = 'none'
-          return
-        }
-
-        // Start shimmer only once reveal begins so animation always starts fresh
-        if (progress > 0 && lit.style.animationPlayState !== 'running') {
-          lit.style.animationPlayState = 'running'
-        }
-
-        const lineProgress = progress * nLines
-        const L = Math.min(Math.floor(lineProgress), nLines - 1)
-        const partialX = (lineProgress - L) * 100
-
-        let polygon: string
-        if (L === 0) {
-          const botPct = (1 / nLines) * 100
-          polygon = `polygon(0% 0%, ${partialX}% 0%, ${partialX}% ${botPct}%, 0% ${botPct}%)`
-        } else {
-          const topPct = (L / nLines) * 100
-          const botPct = ((L + 1) / nLines) * 100
-          polygon = `polygon(0% 0%, 100% 0%, 100% ${topPct}%, ${partialX}% ${topPct}%, ${partialX}% ${botPct}%, 0% ${botPct}%)`
-        }
-
-        lit.style.clipPath = polygon
-      },
-    })
+    window.addEventListener('resize', measureLines)
+    window.addEventListener('scroll', scheduleUpdate, { passive: true })
 
     return () => {
-      scroll.destroy()
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current)
+      }
+      window.removeEventListener('resize', measureLines)
+      window.removeEventListener('scroll', scheduleUpdate)
       ro.disconnect()
     }
-  }, [])
+  }, [wordIndex])
 
   return (
     <>
@@ -174,7 +250,7 @@ function App() {
 
       <div className="problem-closing">
         <div className="globe-clip" aria-hidden="true">
-          <Globe />
+          <DeferredGlobe />
         </div>
         <div className="container">
           <p className="problem-closing__line">It starts with</p>
