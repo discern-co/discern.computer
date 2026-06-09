@@ -8,8 +8,7 @@ import './App.css'
 const MANIFESTO_BEFORE = 'We see it. We solve the problems "not worth" solving. Not worth funding. Not worth pursuing. We build anyway — not for the money, but for the '
 const MANIFESTO_AFTER  = ' who need it.'
 
-const CYCLING_WORDS = ['teachers', 'students', 'veterans', 'scholars', 'rescuers', 'workers', 'parents', 'people']
-const INITIAL_CLIP_PATH = 'polygon(0% 0%, 0% 0%, 0% 0%)'
+const CYCLING_WORDS = ['teachers', 'students', 'scholars', 'workers', 'parents', 'people']
 
 function CyclingWord({ index }: { index: number }) {
   const prevIndex = useRef(index)
@@ -44,17 +43,42 @@ function CyclingWord({ index }: { index: number }) {
 interface Project {
   name: string
   description: string
-  url: string
-  displayUrl: string
+  status: string
+  url?: string
+  displayUrl?: string
 }
+
+const principles = [
+  {
+    title: 'Build it anyway',
+    description:
+      'The market decided these problems weren’t worth solving. We disagree. If the right tool should exist, that is reason enough to make it.',
+  },
+  {
+    title: 'Open by default',
+    description:
+      'Tools for the underserved shouldn’t be held hostage. We build in the open, give the work away, and let anyone carry it forward.',
+  },
+  {
+    title: 'Serve the overlooked',
+    description:
+      'We start with the people the industry skips — the teachers, the volunteers, the small teams — and design for them first, not last.',
+  },
+]
 
 const projects: Project[] = [
   {
     name: 'OpenBoxOffice',
     description:
-      'Open-source, fee-free ticketing for the organizations that need it most. Coming Q3 2026 for nonprofits and PTOs.',
+      'Open-source, fee-free ticketing for the organizations that need it most. Built for nonprofits and PTOs.',
+    status: 'Q3 2026',
     url: 'https://openboxoffice.org',
-    displayUrl: 'openboxoffice.org',
+  },
+  {
+    name: 'Act',
+    description:
+      'npm for agentic tasks — a shared registry for the work you want machines to do.',
+    status: 'Q2 2026',
   },
 ]
 
@@ -63,7 +87,7 @@ function App() {
   const manifestoWrapperRef = useRef<HTMLDivElement>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const animationFrameRef = useRef<number | null>(null)
-  const missionMetricsRef = useRef({ start: 0, end: 1, nLines: 0 })
+  const missionMetricsRef = useRef({ start: 0, end: 1 })
   const [wordIndex, setWordIndex] = useState(0)
 
   useEffect(() => {
@@ -95,41 +119,10 @@ function App() {
     if (!lit) return
 
     const setRevealProgress = (progress: number) => {
-      const { nLines } = missionMetricsRef.current
-      if (nLines === 0) return
-
       progressBar?.style.setProperty('transform', `scaleX(${progress})`)
       progressBar?.style.setProperty('opacity', progress >= 1 ? '0' : '1')
 
-      if (progress <= 0) {
-        lit.style.clipPath = INITIAL_CLIP_PATH
-        lit.style.animationPlayState = 'paused'
-        return
-      }
-
-      if (progress >= 1) {
-        lit.style.clipPath = 'none'
-        lit.style.animationPlayState = 'running'
-        return
-      }
-
-      lit.style.animationPlayState = 'running'
-
-      const lineProgress = progress * nLines
-      const lineIndex = Math.min(Math.floor(lineProgress), nLines - 1)
-      const partialX = (lineProgress - lineIndex) * 100
-
-      if (lineIndex === 0) {
-        const bottomPct = (1 / nLines) * 100
-        lit.style.clipPath =
-          `polygon(0% 0%, ${partialX}% 0%, ${partialX}% ${bottomPct}%, 0% ${bottomPct}%)`
-        return
-      }
-
-      const topPct = (lineIndex / nLines) * 100
-      const bottomPct = ((lineIndex + 1) / nLines) * 100
-      lit.style.clipPath =
-        `polygon(0% 0%, 100% 0%, 100% ${topPct}%, ${partialX}% ${topPct}%, ${partialX}% ${bottomPct}%, 0% ${bottomPct}%)`
+      lit.style.setProperty('--reveal', `${progress * 100}%`)
     }
 
     const updateReveal = () => {
@@ -140,14 +133,13 @@ function App() {
       setRevealProgress(progress)
     }
 
-    const measureLines = () => {
+    const measure = () => {
       const lineH = parseFloat(window.getComputedStyle(lit).lineHeight)
       const nLines = Math.max(
         1,
         Math.round(manifestoWrapper.getBoundingClientRect().height / lineH),
       )
 
-      missionMetricsRef.current.nLines = nLines
       scrollContainer.style.height = `${Math.max(350, nLines * 55)}svh`
 
       const start = scrollContainer.offsetTop
@@ -163,23 +155,22 @@ function App() {
       animationFrameRef.current = window.requestAnimationFrame(updateReveal)
     }
 
-    lit.style.clipPath = INITIAL_CLIP_PATH
-    measureLines()
+    measure()
 
-    const ro = new ResizeObserver(measureLines)
+    const ro = new ResizeObserver(measure)
     ro.observe(manifestoWrapper)
-    window.addEventListener('resize', measureLines)
+    window.addEventListener('resize', measure)
     window.addEventListener('scroll', scheduleUpdate, { passive: true })
 
     return () => {
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current)
       }
-      window.removeEventListener('resize', measureLines)
+      window.removeEventListener('resize', measure)
       window.removeEventListener('scroll', scheduleUpdate)
       ro.disconnect()
     }
-  }, [wordIndex])
+  }, [])
 
   return (
     <>
@@ -239,19 +230,47 @@ function App() {
         </section>
       </div>
 
+      <section className="principles" aria-label="How we work">
+        <div className="container">
+          <h2 className="principles__heading">How We Work</h2>
+          <ol className="principles__list">
+            {principles.map((p, i) => (
+              <li key={p.title} className="principle">
+                <span className="principle__num" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div className="principle__body">
+                  <h3 className="principle__title">{p.title}</h3>
+                  <p className="principle__desc">{p.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
       <section id="main" className="work" aria-label="Projects">
         <div className="container">
           <h2 className="work__heading">What We're Building</h2>
-          <p className="work__sub">More on the way.</p>
           {projects.map((p) => (
             <article key={p.name} className="project">
-              <h2 className="project__name">
-                <a href={p.url} target="_blank" rel="noopener noreferrer">
-                  {p.name}
-                  <span className="project__external" aria-hidden="true">↗︎</span>
-                </a>
-              </h2>
+              <div className="project__head">
+                <h2 className="project__name">
+                  {p.url ? (
+                    <a href={p.url} target="_blank" rel="noopener noreferrer">
+                      {p.name}
+                      <span className="project__external" aria-hidden="true">↗︎</span>
+                    </a>
+                  ) : (
+                    p.name
+                  )}
+                </h2>
+                <span className="project__status">{p.status}</span>
+              </div>
               <p className="project__desc">{p.description}</p>
+              {p.displayUrl && (
+                <span className="project__url">{p.displayUrl}</span>
+              )}
             </article>
           ))}
         </div>
